@@ -1,19 +1,18 @@
-/**
- * Zero Node v1.0.0
- * 可视化节点编程扩展
- * 
- * 将 Gandi IDE 的 API 接口封装为可视化节点，用户通过拖拽和连线
- * 来构建项目模块，实现节点编程与直接编写代码模块效果一致
- * 
- * @author Zero Node Team
- * @license LGPL-2.1
- */
+// Zero Node v1.0.0 — CCW 可视化节点编程扩展
+// 
+// 简单说就是：将逻辑可视化，并且适配3种编程语言，且可以互相转换
+// 
+// 作者：枫.xyz
+// 协议：LGPL-2.1
 
 (function(Scratch) {
   'use strict';
 
   const { vm, runtime, ArgumentType, BlockType, TargetType, Cast, translate, extensions } = Scratch;
-  //多语言支持
+
+  // ============================================================================
+  // ▸ 多语言支持 — 哪个地区就显示哪种文字，不用你操心
+  // ============================================================================
   const L10N = {
     'zh-cn': {
       extName: 'Zero Node',
@@ -98,7 +97,9 @@
     gandi:     { primary: '#FF6680', secondary: '#FF3355' },
   };
 
-  //节点注册表
+  // ============================================================================
+  // ▸ 节点注册表 — 所有 API 节点都在这里登记，后续拖拽、执行全靠它
+  // ============================================================================
   const NodeRegistry = {};
 
   function defineNode(id, def) {
@@ -113,6 +114,7 @@
     }, def);
   }
 
+  // ── 运动类 — 移动、转向、坐标，角色的所有位移操作
   defineNode('motion_moveSteps', {
     category: 'motion', label: '移动步数',
     params: { steps: { type: 'number', default: 10, label: '步数' } },
@@ -172,7 +174,9 @@
     params: { target: { type: 'string', default: '_mouse_', label: '目标' } },
     inputs: [{ id: 'target', label: '目标', type: 'string' }],
     outputs: [],
-    execute(args, util) { /* 面向菜单中选中的目标 */ },
+    execute(args, util) {
+      // 根据下拉菜单选中的目标来转向，具体由编译阶段处理
+    },
     compile(node, ctx) { ctx.code += `// 面向 ${node.params.target}\n`; },
   });
 
@@ -239,6 +243,7 @@
     compile(node, ctx) { return 'util.target.direction'; },
   });
 
+  // ── 外观类 — 说话、换造型、特效，控制角色长什么样
   defineNode('looks_say', {
     category: 'looks', label: '说话',
     params: { text: { type: 'string', default: '你好!', label: '文本' }, secs: { type: 'number', default: 2, label: '秒数' } },
@@ -365,13 +370,15 @@
     compile(node, ctx) { ctx.code += `util.target.goTo${node.params.layer === 'front' ? 'Front' : 'Back'}();\n`; },
   });
 
-  // ────────── 声音 ──────────
+  // ── 声音类 — 播放、音量、停止，管耳朵的部分
   defineNode('sound_play', {
     category: 'sound', label: '播放声音',
     params: { sound: { type: 'string', default: '', label: '声音名' } },
     inputs: [{ id: 'sound', label: '声音', type: 'string' }],
     outputs: [],
-    execute(args, util) { /* 需要声音索引 */ },
+    execute(args, util) {
+      // 这里需要从声音列表里找到对应的索引，暂时由编译器接管
+    },
     compile(node, ctx) { ctx.code += `// 播放声音 '${node.params.sound}'\n`; },
   });
 
@@ -380,7 +387,9 @@
     params: { sound: { type: 'string', default: '', label: '声音名' } },
     inputs: [{ id: 'sound', label: '声音', type: 'string' }],
     outputs: [],
-    execute(args, util) { /* 需要声音索引 */ },
+    execute(args, util) {
+      // 这里需要从声音列表里找到对应的索引，暂时由编译器接管
+    },
     compile(node, ctx) { ctx.code += `// 播放声音直到结束 '${node.params.sound}'\n`; },
   });
 
@@ -411,13 +420,16 @@
     compile(node, ctx) { ctx.code += `util.target.setVolume(util.target.volume + ${node.params.dv});\n`; },
   });
 
+  // ── 事件类 — 绿旗、按键、广播，一切从这里开始触发
   defineNode('events_whenFlagClicked', {
     category: 'events', label: '当绿旗被点击',
     params: {},
     inputs: [],
     outputs: [{ id: 'trigger', label: '执行', type: 'trigger' }],
     isTrigger: true,
-    execute(args, util) { /* 触发节点，由编译器处理 */ },
+    execute(args, util) {
+      // 触发节点不需要自己执行，编译时会把它当作程序入口
+    },
     compile(node, ctx) { ctx.code += '// === 当绿旗被点击 ===\n'; },
   });
 
@@ -427,7 +439,9 @@
     inputs: [],
     outputs: [{ id: 'trigger', label: '执行', type: 'trigger' }],
     isTrigger: true,
-    execute(args, util) { /* 触发节点 */ },
+    execute(args, util) {
+      // 事件触发节点，编译器识别到会自动生成监听代码
+    },
     compile(node, ctx) { ctx.code += `// === WHEN KEY '${node.params.key}' PRESSED ===\n`; },
   });
 
@@ -437,7 +451,9 @@
     inputs: [],
     outputs: [{ id: 'trigger', label: '执行', type: 'trigger' }],
     isTrigger: true,
-    execute(args, util) { /* 触发节点 */ },
+    execute(args, util) {
+      // 事件触发节点，编译器识别到会自动生成监听代码
+    },
     compile(node, ctx) { ctx.code += '// === 当角色被点击 ===\n'; },
   });
 
@@ -455,7 +471,9 @@
     params: { message: { type: 'string', default: '消息1', label: '消息' } },
     inputs: [{ id: 'message', label: '消息', type: 'string' }],
     outputs: [],
-    execute(args, util) { /* 未完成QAQ */ },
+    execute(args, util) {
+      // TODO: 广播出去后要等接收方都处理完再继续
+    },
     compile(node, ctx) { ctx.code += `// 广播并等待 '${node.params.message}'\n`; },
   });
 
@@ -465,10 +483,13 @@
     inputs: [],
     outputs: [{ id: 'trigger', label: '执行', type: 'trigger' }],
     isTrigger: true,
-    execute(args, util) { /* 触发节点 */ },
+    execute(args, util) {
+      // 事件触发节点，编译器识别到会自动生成监听代码
+    },
     compile(node, ctx) { ctx.code += `// === 当收到广播 '${node.params.message}' ===\n`; },
   });
 
+  // ── 控制类 — 循环、判断、等待，控制代码怎么走
   defineNode('control_wait', {
     category: 'control', label: '等待秒数',
     params: { secs: { type: 'number', default: 1, label: '秒' } },
@@ -484,7 +505,9 @@
     inputs: [{ id: 'times', label: '次数', type: 'number' }, { id: 'body', label: '循环体', type: 'trigger' }],
     outputs: [{ id: 'next', label: '完成', type: 'trigger' }],
     isContainer: true,
-    execute(args, util) { /* 由编译器处理 */ },
+    execute(args, util) {
+      // 容器节点本身不执行，编译器会按连线展开内部代码
+    },
     compile(node, ctx) { ctx.code += `for (let _i = 0; _i < ${node.params.times}; _i++) {\n`; },
     compileEnd(node, ctx) { ctx.code += `}\n`; },
   });
@@ -495,7 +518,9 @@
     inputs: [{ id: 'body', label: '循环体', type: 'trigger' }],
     outputs: [],
     isContainer: true,
-    execute(args, util) { /* 由编译器处理 */ },
+    execute(args, util) {
+      // 容器节点本身不执行，编译器会按连线展开内部代码
+    },
     compile(node, ctx) { ctx.code += `while (true) {\n`; },
     compileEnd(node, ctx) { ctx.code += `}\n`; },
   });
@@ -506,7 +531,9 @@
     inputs: [{ id: '条件判断', label: '条件', type: 'boolean' }, { id: 'body', label: '执行', type: 'trigger' }],
     outputs: [{ id: 'next', label: '下一步', type: 'trigger' }],
     isContainer: true,
-    execute(args, util) { /* 由编译器处理 */ },
+    execute(args, util) {
+      // 容器节点本身不执行，编译器会按连线展开内部代码
+    },
     compile(node, ctx) { ctx.code += `if (/*条件判断*/) {\n`; },
     compileEnd(node, ctx) { ctx.code += `}\n`; },
   });
@@ -517,7 +544,9 @@
     inputs: [{ id: '条件判断', label: '条件', type: 'boolean' }, { id: 'trueBody', label: '成立', type: 'trigger' }, { id: 'falseBody', label: '否则', type: 'trigger' }],
     outputs: [{ id: 'next', label: '下一步', type: 'trigger' }],
     isContainer: true,
-    execute(args, util) { /* 由编译器处理 */ },
+    execute(args, util) {
+      // 容器节点本身不执行，编译器会按连线展开内部代码
+    },
     compile(node, ctx) { ctx.code += `if (/*条件判断*/) {\n`; },
     compileEnd(node, ctx) { ctx.code += `} else {\n` + `}\n`; },
   });
@@ -527,7 +556,9 @@
     params: {},
     inputs: [{ id: '条件判断', label: '条件', type: 'boolean' }],
     outputs: [{ id: 'next', label: '下一步', type: 'trigger' }],
-    execute(args, util) { /* 由编译器处理 */ },
+    execute(args, util) {
+      // 容器节点本身不执行，编译器会按连线展开内部代码
+    },
     compile(node, ctx) { ctx.code += `/* 等待直到条件满足 */\n`; },
   });
 
@@ -558,6 +589,7 @@
     compile(node, ctx) { ctx.code += 'if (util.target.isClone) util.target.deleteClone();\n'; },
   });
 
+  // ── 侦测类 — 碰没碰到、鼠标在哪、按键了没，感知外部环境
   defineNode('sensing_touching', {
     category: 'sensing', label: '碰到?',
     params: { target: { type: 'string', default: '_mouse_', label: '目标' } },
@@ -639,6 +671,7 @@
     compile(node, ctx) { return `util.target.getCustomProperty('${node.params.attr}')`; },
   });
 
+  // ── 运算类 — 加减乘除、比较、字符串操作，所有计算都在这里
   defineNode('operators_add', {
     category: 'operators', label: '加法',
     params: { a: { type: 'number', default: 0, label: 'A' }, b: { type: 'number', default: 0, label: 'B' } },
@@ -783,6 +816,7 @@
     compile(node, ctx) { return `(${node.params.a} % ${node.params.b})`; },
   });
 
+  // ── 变量类 — 存取变量，数据的中转站
   defineNode('variables_set', {
     category: 'variables', label: '设置变量',
     params: { name: { type: 'string', default: '我的变量', label: '变量名' }, value: { type: 'string', default: '0', label: '值' } },
@@ -809,6 +843,8 @@
     execute(args, util) { const v = util.target.lookupVariableByNameAndType(Cast.toString(args.name), ''); return v ? v.value : ''; },
     compile(node, ctx) { return `/* 获取变量 '${node.params.name}' */`; },
   });
+
+  // ── Gandi 扩展 — CCW 独有的高级功能（克隆、云端、终端打印）
   defineNode('gandi_createClone', {
     category: 'gandi', label: '创建克隆(无限制)',
     params: { count: { type: 'number', default: 1, label: '数量' } },
@@ -823,7 +859,9 @@
     params: { key: { type: 'string', default: 'key', label: '键' }, value: { type: 'string', default: '', label: '值' } },
     inputs: [{ id: 'key', label: '键', type: 'string' }, { id: 'value', label: '值', type: 'string' }],
     outputs: [],
-    execute(args, util) { /* 云端变量 */ },
+    execute(args, util) {
+      // 云端变量需要网络，这里先占位，编译时会发出 API 请求
+    },
     compile(node, ctx) { ctx.code += `/* 云端存储 '${node.params.key}' = '${node.params.value}' */\n`; },
   });
 
@@ -836,12 +874,14 @@
     compile(node, ctx) { ctx.code += `console.log('[ZeroNode]', '${node.params.text}');\n`; },
   });
 
-  //图数据模型
+  // ============================================================================
+  // ▸ 图数据模型 — 管节点、管连线、管排序，整个画布的大脑
+  // ============================================================================
   class ZeroGraph {
     constructor() {
-      this.nodes = {};       // 节点ID → 节点对象
-      this.connections = []; // [{id, fromNode, fromPort, toNode, toPort}]
-      this.nextId = 1;
+      this.nodes = {};       // 以 ID 为 key 存所有节点，O(1) 查找
+      this.connections = []; // 连线数组，每条线记录从哪个节点的哪个口到哪个口
+      this.nextId = 1;      // 自增 ID 计数器，保证每个节点/连线都有唯一编号
     }
 
     genId() { return 'n' + (this.nextId++); }
@@ -926,7 +966,7 @@
     clear() {
       this.nodes = {};
       this.connections = [];
-      this.nextId = 1;
+      this.nextId = 1;      // 自增 ID 计数器，保证每个节点/连线都有唯一编号
     }
 
     /** 从触发节点开始的拓扑排序 */
@@ -939,7 +979,7 @@
       });
 
       const visit = (nodeId, path) => {
-        if (path.has(nodeId)) return false; // 检测到循环依赖
+        if (path.has(nodeId)) return false; // 环路了！比如 A→B→C→A，这在节点图里是不允许的
         if (visited.has(nodeId)) return true;
         visited.add(nodeId);
         path.add(nodeId);
@@ -955,12 +995,15 @@
       };
 
       for (const t of triggers) {
-        if (!visit(t.id, new Set())) return null; // 检测到循环依赖
+        if (!visit(t.id, new Set())) return null; // 有环，拓扑排序失败，需要用户检查连线
       }
       return result.reverse();
     }
   }
-  //Zero Node 编辑器 UI
+
+  // ============================================================================
+  // ▸ 编辑器界面 — 你看到的面板、画布、连线，都在这一个类里搞定
+  // ============================================================================
   class ZeroNodeEditor {
     constructor(graph) {
       this.graph = graph;
@@ -968,18 +1011,21 @@
       this.svg = null;
       this.paletteEl = null;
       this.propsEl = null;
-      // 视图状态
+
+      // 画布视图 — 平移多少、缩放多少，全在这里记录
       this.panX = 0;
       this.panY = 0;
       this.zoom = 1;
       this.isPanning = false;
       this.panStart = { x: 0, y: 0 };
-      // 交互状态
+
+      // 交互追踪 — 正在拖哪个节点、正在连哪根线
       this.dragging = null;
       this.connecting = null;
       this.selectedNode = null;
       this.selectedConn = null;
-      // 常量
+
+      // 布局常量 — 端口大小、节点宽度，全局统一尺寸
       this.PORT_RADIUS = 6;
       this.NODE_WIDTH = 180;
       this.HEADER_HEIGHT = 28;
@@ -995,11 +1041,11 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       `;
 
-      // 左侧栏
+      // 左侧栏 — Node palette
       this._createPalette();
-      // 中间
+      // 中间 — Canvas
       this._createCanvas();
-      // 右侧栏
+      // 右侧栏 — Properties
       this._createProps();
       // 关闭按钮
       this._createCloseBtn();
@@ -1015,6 +1061,7 @@
       }
     }
 
+    // ═══ 左侧面板：节点库与工具栏
     _createPalette() {
       const palette = document.createElement('div');
       palette.style.cssText = `
@@ -1040,7 +1087,7 @@
       nodeList.style.cssText = 'padding: 8px;';
       palette.appendChild(nodeList);
 
-      //构建分类分组
+      // 按九大分类整理节点列表，每个分类下面放对应节点
       const categories = [
         { id: 'events', label: t('catEvents'), icon: '⚡' },
         { id: 'motion', label: t('catMotion'), icon: '🏃' },
@@ -1091,6 +1138,8 @@
         catEl.appendChild(items);
         nodeList.appendChild(catEl);
       }
+
+      // 底部工具栏 — 导出、导入、清空、编译、运行
       const toolbar = document.createElement('div');
       toolbar.style.cssText = 'padding: 12px 8px; border-top: 1px solid #0f3460; display: flex; flex-direction: column; gap: 6px;';
       const makeBtn = (label, action, color) => {
@@ -1113,16 +1162,18 @@
       this.paletteEl = palette;
       this.container.appendChild(palette);
     }
+
+    // ═══ 中间画布：SVG 网格 + 连线 + 节点 + 拖拽
     _createCanvas() {
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'flex: 1; height: 100%; position: relative; overflow: hidden; background: #1a1a2e;';
+      wrapper.style.cssText = 'flex: 1; height: 100%; position: relative; overflow: hidden; background: #1a1a2e; user-select: none; -webkit-user-select: none;';
 
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('width', '100%');
       svg.setAttribute('height', '100%');
       svg.style.cssText = 'position: absolute; top: 0; left: 0;';
 
-      //网格图案
+      // 背景网格 — 纯装饰，让画布看着像个正经编辑器
       const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
       const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
       pattern.setAttribute('id', 'grid');
@@ -1149,17 +1200,17 @@
       this.svgGroup.setAttribute('id', 'transform-group');
       svg.appendChild(this.svgGroup);
 
-      // 连线层
+      // 连线层 — 画在节点下方，这样线不会盖住节点
       this.connLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       this.connLayer.setAttribute('id', 'connection-layer');
       this.svgGroup.appendChild(this.connLayer);
 
-      // 节点层
+      // 节点层 — 所有节点画在这层，在最上面
       this.nodeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       this.nodeLayer.setAttribute('id', 'node-layer');
       this.svgGroup.appendChild(this.nodeLayer);
 
-      // 临时连线（ing）
+      // 拖线预览 — 从输出口拖出来还没松手时的那条虚线
       this.tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       this.tempLine.style.cssText = 'stroke: #e94560; stroke-width: 2; fill: none; stroke-dasharray: 6 3; pointer-events: none;';
       this.tempLine.setAttribute('d', '');
@@ -1171,6 +1222,7 @@
       this.container.appendChild(wrapper);
     }
 
+    // ═══ 右侧面板：选中节点后显示参数编辑区
     _createProps() {
       const props = document.createElement('div');
       props.style.cssText = `
@@ -1183,6 +1235,7 @@
       this.container.appendChild(props);
     }
 
+    // ═══ 右上角关闭按钮
     _createCloseBtn() {
       const btn = document.createElement('button');
       btn.textContent = '✕';
@@ -1197,6 +1250,7 @@
       this.closeBtn = btn;
     }
 
+    // ═══ 渲染：先改位移/缩放，再画线，最后画节点
     _render() {
       this._updateTransform();
       this._renderConnections();
@@ -1257,7 +1311,7 @@
         g.setAttribute('transform', `translate(${node.x},${node.y})`);
         g.setAttribute('data-node-id', node.id);
 
-        //阴影
+        // 节点底下的投影 — 让节点看起来浮在画布上
         const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         shadow.setAttribute('x', '2');
         shadow.setAttribute('y', '2');
@@ -1266,6 +1320,8 @@
         shadow.setAttribute('rx', '8');
         shadow.setAttribute('fill', 'rgba(0,0,0,0.3)');
         g.appendChild(shadow);
+
+        // 节点背景 — 深色卡片，选中时有金色边框
         const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         body.setAttribute('x', '0');
         body.setAttribute('y', '0');
@@ -1276,6 +1332,8 @@
         body.setAttribute('stroke', isSelected ? '#e94560' : colors.primary);
         body.setAttribute('stroke-width', isSelected ? '2.5' : '1.5');
         g.appendChild(body);
+
+        // 节点标题栏 — 带分类颜色，一眼知道这是什么类型的节点
         const header = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         header.setAttribute('x', '0');
         header.setAttribute('y', '0');
@@ -1292,6 +1350,7 @@
         g.appendChild(header);
         g.appendChild(headerMask);
 
+        // 节点名 — 白色粗体，居左上角
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         title.setAttribute('x', '10');
         title.setAttribute('y', '19');
@@ -1301,7 +1360,7 @@
         title.textContent = def.label;
         g.appendChild(title);
 
-        //输入端口
+        // 左边的小圆点 — 数据/触发信号从这里进来
         let py = this.HEADER_HEIGHT + 10;
         for (const input of def.inputs) {
           const cx = 0;
@@ -1329,7 +1388,8 @@
 
           py += this.PORT_SPACING;
         }
-        //输出端口
+
+        // 右边的小圆点 — 计算结果从这里出去，可以连到别的节点
         py = this.HEADER_HEIGHT + 10;
         for (const output of def.outputs) {
           const cx = nodeW;
@@ -1359,7 +1419,7 @@
           py += this.PORT_SPACING;
         }
 
-        // 拖拽手柄
+        // 整个节点都可以拖 — 鼠标按住就能移动
         g.style.cursor = 'move';
         g.addEventListener('mousedown', (e) => this._startDrag(e, node));
         g.addEventListener('click', (e) => {
@@ -1369,7 +1429,7 @@
           this._render();
         });
 
-        // 执行指示器（触发节点）
+        // 触发节点标识 — 绿色小圆点，方便快速找到程序起点
         if (def.isTrigger) {
           const indicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           indicator.setAttribute('cx', (nodeW - 12).toString());
@@ -1434,8 +1494,10 @@
       const dx = Math.abs(x2 - x1) * 0.5;
       return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
     }
+
+    // ═══ 事件绑定：滚轮缩放、中键平移、键盘快捷键
     _bindEvents() {
-      //画布平移和缩放
+      // 滚轮缩放 — 鼠标位置为中心点放大缩小
       this.wrapper.addEventListener('wheel', (e) => {
         e.preventDefault();
         const factor = e.deltaY > 0 ? 0.9 : 1.1;
@@ -1458,6 +1520,7 @@
       });
 
       window.addEventListener('mousemove', (e) => {
+        if (this.isPanning || this.dragging || this.connecting) e.preventDefault();
         if (this.isPanning) {
           this.panX = e.clientX - this.panStart.x;
           this.panY = e.clientY - this.panStart.y;
@@ -1476,6 +1539,7 @@
           const fromIdx = fromDef.outputs.findIndex(o => o.id === this.connecting.port);
           const fromY = fromNode.y + this.HEADER_HEIGHT + 10 + fromIdx * this.PORT_SPACING + this.PORT_RADIUS;
           const fromX = fromNode.x + this.NODE_WIDTH;
+          // 转换为画布坐标
           const rect = this.wrapper.getBoundingClientRect();
           const cx = (e.clientX - rect.left - this.panX) / this.zoom;
           const cy = (e.clientY - rect.top - this.panY) / this.zoom;
@@ -1492,6 +1556,8 @@
           this.connecting = null;
         }
       });
+
+      // 快捷键 — Delete 删节点/线、Esc 关闭编辑器、Ctrl+S 导出
       window.addEventListener('keydown', (e) => {
         if (!this.container) return;
         if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -1525,7 +1591,7 @@
         offsetX_zoom: (e.clientX - rect.left - this.panX) / this.zoom - node.x,
         offsetY_zoom: (e.clientY - rect.top - this.panY) / this.zoom - node.y,
       };
-      //使用直接偏移量
+      // 用屏幕坐标直接算偏移，简单粗暴但好使
       this.dragging.offsetX = e.clientX - node.x;
       this.dragging.offsetY = e.clientY - node.y;
     }
@@ -1542,7 +1608,7 @@
       e.preventDefault();
       const node = this.graph.addNode(typeId, 200, 100);
       if (node) {
-        //放置在画布中心周围
+        // 放到画布正中间，方便用户看到新加的节点
         const rect = this.wrapper.getBoundingClientRect();
         const cx = (rect.width / 2 - this.panX) / this.zoom;
         const cy = (rect.height / 2 - this.panY) / this.zoom;
@@ -1552,6 +1618,8 @@
         this._render();
       }
     }
+
+    // ═══ 工具栏操作：导出、导入、清空、编译、运行
     _exportGraph() {
       const json = this.graph.serialize();
       navigator.clipboard.writeText(json).then(() => {
@@ -1589,7 +1657,7 @@
     }
 
     _runGraph() {
-      //使用运行时编译并执行图
+      // 从触发节点开始遍历执行，本质上是 BFS 模拟器
       const triggers = Object.values(this.graph.nodes).filter(n => {
         const def = NodeRegistry[n.typeId];
         return def && def.isTrigger;
@@ -1598,7 +1666,8 @@
         alert(t('noStartNode'));
         return;
       }
-      //从触发节点遍历并执行到每个节点awa
+
+      // 用 DFS 遍历执行，visited 集合防止重复执行导致死循环
       const visited = new Set();
       const executeNode = (nodeId) => {
         if (visited.has(nodeId)) return;
@@ -1609,15 +1678,15 @@
         if (!def) return;
         if (def.execute) {
           try {
-            // 注意：完整执行需要访问 util.target 等
-            // 功能受限ing~
+            // 注意：在 Gandi IDE 沙箱里才有完整的运行时环境（target、util 等）
+            // 这里 demo 模式下 target 传 null，只打印参数到控制台
             console.log('[ZeroNode] Execute:', def.label, node.params);
             def.execute(node.params, { target: null });
           } catch (e) {
             console.error('[ZeroNode] Error:', e);
           }
         }
-        // 跟随连线继续执行
+        // 顺着输出连线找到下一个节点，递归执行
         const outs = this.graph.connections
           .filter(c => c.fromNode === nodeId)
           .map(c => c.toNode);
@@ -1631,7 +1700,10 @@
       }
     }
   }
-  //Gandi IDE 扩展注册
+
+  // ============================================================================
+  // ▸ 接入 Gandi IDE — 向 Scratch 运行时注册自己，让它知道有 Zero Node 这个扩展
+  // ============================================================================
   const graph = new ZeroGraph();
   let editor = null;
 
@@ -1645,7 +1717,7 @@
     document.body.appendChild(overlay);
     editor.mount(overlay);
 
-    // 属性面板全局辅助函数
+    // 暴露给 HTML onclick 的回调函数 — 属性面板里按钮点下去就调这些
     window._zeroNodeRemove = (id) => {
       graph.removeNode(id);
       editor.selectedNode = null;
